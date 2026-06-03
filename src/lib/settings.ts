@@ -8,6 +8,7 @@ import type { KordiConfig } from "./types";
 const NS = "kordi";
 
 const DEFAULTS: KordiConfig = {
+  kordiBase: "https://kordiapp.com",
   mcpUrl: "",
   scanIntervalMinutes: 60,
   enableAudio: false,
@@ -71,6 +72,7 @@ export async function getConfig(): Promise<KordiConfig> {
   }
   const derived = await deriveOllamaDefaults();
   return {
+    kordiBase: str(ns.kordiBase, DEFAULTS.kordiBase),
     mcpUrl: str(ns.mcpUrl, DEFAULTS.mcpUrl),
     scanIntervalMinutes: Math.max(5, num(ns.scanIntervalMinutes, DEFAULTS.scanIntervalMinutes)),
     enableAudio: bool(ns.enableAudio, DEFAULTS.enableAudio),

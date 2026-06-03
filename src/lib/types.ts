@@ -20,7 +20,9 @@ export interface DetectedSub {
 
 /** User-facing pipe configuration (persisted in Screenpipe settings, namespace "kordi"). */
 export interface KordiConfig {
-  /** Full Kordi MCP URL incl. token, copied from the dashboard "Connect Screenpipe" panel. */
+  /** Kordi API base (default https://kordiapp.com) — used for the signup call. */
+  kordiBase: string;
+  /** Full Kordi MCP URL incl. token. Empty until the user signs up / connects. */
   mcpUrl: string;
   /** How far back each scan looks / how often the cron runs, in minutes. */
   scanIntervalMinutes: number;
