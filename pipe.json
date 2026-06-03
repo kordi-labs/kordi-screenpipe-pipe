@@ -1,0 +1,11 @@
+{
+  "name": "kordi-subscription-finder",
+  "version": "0.1.0",
+  "description": "Finds subscriptions on your screen (billing pages, receipts, renewal banners) and tracks them in Kordi via the MCP kordi_ingest_subscription tool.",
+  "crons": [
+    {
+      "path": "/api/scan",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
