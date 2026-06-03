@@ -1,14 +1,14 @@
-# Kordi — Subscription Finder (Screenpipe pipe)
+# kordi — Subscription Finder (Screenpipe pipe)
 
 A [Screenpipe](https://screenpi.pe) pipe that finds the subscriptions you're paying
 for by reading what's been on your screen — billing pages, receipts, renewal banners,
-"manage plan" screens — and tracks them in [Kordi](https://kordiapp.com), which shows
+"manage plan" screens — and tracks them in [kordi](https://kordiapp.com), which shows
 you what each one costs and where you can save.
 
-No Kordi account needed up front: set your email, and the first sync creates your
+No kordi account needed up front: set your email, and the first sync creates your
 account and emails you a link to secure it.
 
-Complementary to Kordi's email-based discovery (Qira): that catches subscriptions in
+Complementary to kordi's email-based discovery (Qira): that catches subscriptions in
 your inbox; this catches the ones that only ever show up on screen.
 
 ## How it works
@@ -21,8 +21,8 @@ local coding agent. Every hour the agent:
 3. identifies subscriptions — a known service **and** a billing signal, with the
    monthly amount and billing day,
 4. skips anything it already sent (`./output/kordi-seen.json`),
-5. POSTs the new/changed ones to Kordi's public `POST /api/guest-ingest`,
-6. notifies you, and — on the first sync — Kordi emails you a link to finish setup.
+5. POSTs the new/changed ones to kordi's public `POST /api/guest-ingest`,
+6. notifies you, and — on the first sync — kordi emails you a link to finish setup.
 
 There's no UI and no build step. The agent *is* the detector; the catalog of known
 services and the extraction rules live in the prompt.
@@ -62,12 +62,12 @@ After that it runs hourly on its own (`schedule: every 60m` in the frontmatter).
 - The only things that leave your machine are, per subscription, a **service name, a
   monthly amount, and a billing day**, plus the email you put in `.env`. Never card
   numbers, account details, or screenshots.
-- Detection runs locally inside Screenpipe's agent; Kordi only ever receives that
+- Detection runs locally inside Screenpipe's agent; kordi only ever receives that
   small JSON payload.
 
 ## Backend contract
 
-Talks to the Kordi backend (live at `kordiapp.com`):
+Talks to the kordi backend (live at `kordiapp.com`):
 
 - `POST /api/guest-ingest` — public shadow-account signup + subscription import
   (`source: "screenpipe"`); idempotent, dedupes by name, rate-limited per IP.
