@@ -1,109 +1,84 @@
-# Kordi Subscription Finder (Screenpipe pipe)
+# Kordi — Subscription Finder (Screenpipe pipe)
 
-A [Screenpipe](https://screenpi.pe) pipe that discovers subscriptions from your
-on-screen activity — billing pages, receipts, renewal banners, in-app signups —
-and tracks them in [Kordi](https://kordiapp.com). **No Kordi account is needed
-to start:** scan your screen, see what you're paying, then create an account in
-one step if you want it tracked.
+A [Screenpipe](https://screenpi.pe) pipe that finds the subscriptions you're paying
+for by reading what's been on your screen — billing pages, receipts, renewal banners,
+"manage plan" screens — and tracks them in [Kordi](https://kordiapp.com), which shows
+you what each one costs and where you can save.
 
-Complementary to Kordi's email-based discovery (Qira): that catches
-subscriptions in your inbox; this catches the ones that only show up on screen.
+No Kordi account needed up front: set your email, and the first sync creates your
+account and emails you a link to secure it.
 
-## The flow
+Complementary to Kordi's email-based discovery (Qira): that catches subscriptions in
+your inbox; this catches the ones that only ever show up on screen.
 
-```
-1. Scan my screen        → local audit: "N subscriptions · $X/mo"   (no account)
-2. Create my account     → POST email to Kordi /api/guest-ingest
-                           → account created, subs imported, magic link emailed
-3. (ongoing) hourly cron → syncs new/changed subs via MCP
-```
+## How it works
 
-- **Audit (no account):** `POST /api/audit` runs `collectDetections()` over the
-  last 7 days and returns the findings + monthly total. This is the hook.
-- **Signup:** `POST /api/signup` sends your email + the found subs to Kordi's
-  public `/api/guest-ingest`. Kordi creates a free account, imports the subs,
-  returns a token (persisted here so the cron can keep syncing), and emails a
-  "secure your account" link.
-- **Ongoing sync:** once connected, the hourly cron (`pipe.json` →
-  `/api/scan`) detects and pushes new/changed subs via the MCP
-  `kordi_ingest_subscription` tool (`source: "screenpipe"`), paced under
-  Kordi's 20/min limit.
+This is a single [`pipe.md`](pipe.md) — a scheduled prompt that Screenpipe runs with a
+local coding agent. Every hour the agent:
 
-## Detection (hybrid)
+1. reads your `KORDI_EMAIL` from `.env`,
+2. queries the last hour of **screen** text for billing activity (never audio),
+3. identifies subscriptions — a known service **and** a billing signal, with the
+   monthly amount and billing day,
+4. skips anything it already sent (`./output/kordi-seen.json`),
+5. POSTs the new/changed ones to Kordi's public `POST /api/guest-ingest`,
+6. notifies you, and — on the first sync — Kordi emails you a link to finish setup.
 
-[`src/lib/detect.ts`](src/lib/detect.ts): a cheap regex/catalog prefilter
-([`catalog.ts`](src/lib/catalog.ts)) recognizes known services + prices, then a
-local Ollama call ([`ollama.ts`](src/lib/ollama.ts)) extracts arbitrary/niche
-services as strict JSON. If Ollama isn't running, the pipe falls back to
-catalog-only detection (and says so in the UI / a once-a-day notification) — it
-never hard-fails because the LLM is down. Dedupe ([`state.ts`](src/lib/state.ts))
-is keyed exactly like Kordi's server (`name.toLowerCase().trim()`).
+There's no UI and no build step. The agent *is* the detector; the catalog of known
+services and the extraction rules live in the prompt.
 
-## Prerequisites
+## Setup
 
-- **Screenpipe** installed and running (provides the `localhost:3030` API).
-- **An email** — that's the whole signup. (No pre-existing Kordi account.)
-- **Ollama** (optional, recommended) for services beyond the built-in catalog.
-  Defaults its model/URL from Screenpipe's own AI settings when you run native
-  Ollama.
+1. **Set your email.** This is the only configuration, and it's required:
 
-## Install & run (development)
+   ```bash
+   echo "KORDI_EMAIL=you@example.com" > ~/.screenpipe/pipes/kordi/.env
+   # optional: point at a non-prod backend
+   # echo "KORDI_API=https://preview.kordiapp.com" >> ~/.screenpipe/pipes/kordi/.env
+   ```
 
-```bash
-npm install
-npm run dev        # config UI + cron/audit/signup routes (Next.js)
-npm run typecheck
-npm run build
-```
+   The agent never guesses your identity from the screen — your email comes only from
+   this file. If it's missing, the pipe notifies you and does nothing.
 
-Install into Screenpipe via the Pipe Store, or point Screenpipe at this folder /
-its GitHub URL.
+2. **Install & enable:**
 
-## Configuration
+   ```bash
+   bunx screenpipe pipe install <this repo path or GitHub URL>
+   bunx screenpipe pipe enable kordi
+   ```
 
-| Field | Default | Notes |
-|---|---|---|
-| Kordi API base | `https://kordiapp.com` | where signup posts; point at a preview env for testing |
-| Ollama model / URL | from Screenpipe AI settings, else `llama3.2` / `http://localhost:11434` | local extraction |
-| Sync every (minutes) | 60 | also the cron cadence (`pipe.json`) |
-| Min confidence | 0.6 | below this, detections are ignored |
-| Exclude apps | — | comma-separated app-name substrings to never scan |
-| Scan audio | off | opt-in; scans audio transcripts too |
+3. **Try it now** (optional): open a billing page (your Netflix/Spotify account), then
 
-The connection token (`mcpUrl`) is set **automatically** after signup; you don't
-paste anything. Settings persist in Screenpipe's settings store (namespaces
-`kordi` / `kordi_state`).
+   ```bash
+   bunx screenpipe pipe run kordi
+   bunx screenpipe pipe logs kordi
+   ```
+
+After that it runs hourly on its own (`schedule: every 60m` in the frontmatter).
 
 ## Privacy
 
-Screenpipe scrubs sensitive data (card numbers, etc.) **before** storage. This
-pipe reads only a **service name, amount, and billing date** — never card
-details — and sends only those (plus your email, on signup) to Kordi. Excluded
-apps are never scanned; audio scanning is off unless you turn it on.
-
-## Manual runtime test
-
-Needs the Screenpipe desktop app (can't run headless):
-
-1. `npm run dev` with Screenpipe running.
-2. Open a known billing page (e.g. your Netflix/Spotify account page).
-3. Click **Scan my screen** → confirm it lists the subscription(s) and a total.
-4. Enter an email → **Create my Kordi account & sync** → confirm "Synced N…",
-   that the account appears in Kordi, and that you receive the verify email. In
-   Kordi's DB the new user has `acquisition_source = 'screenpipe'`,
-   `verified = 0` (until you click the link), and a `discover` event per sub.
+- Reads **screen text only** — audio is never queried.
+- The only things that leave your machine are, per subscription, a **service name, a
+  monthly amount, and a billing day**, plus the email you put in `.env`. Never card
+  numbers, account details, or screenshots.
+- Detection runs locally inside Screenpipe's agent; Kordi only ever receives that
+  small JSON payload.
 
 ## Backend contract
 
-Relies on the Kordi backend `feature/screenpipe-backend-ingestion` branch:
-`POST /api/guest-ingest` (public shadow-account signup), `GET /api/verify-account`
-(magic link), the `kordi_ingest_subscription` MCP tool (`source:'screenpipe'`),
-and the `verified` / `acquisition_source` columns (migration `0004`).
+Talks to the Kordi backend (live at `kordiapp.com`):
+
+- `POST /api/guest-ingest` — public shadow-account signup + subscription import
+  (`source: "screenpipe"`); idempotent, dedupes by name, rate-limited per IP.
+- `GET /api/verify-account` — the magic link from the first-sync email.
+- Columns `verified` / `acquisition_source` (migration `0004`) track the
+  Screenpipe → verified-user funnel.
 
 ## Notes
 
-- `npm audit` may report transitive advisories from Next.js 14; the flagged
-  Next.js issue itself is patched (pinned to the latest 14.2.x). Re-run before
-  publishing.
-- Model output is requested as strict JSON; malformed / low-confidence
-  extractions are dropped rather than ingested.
+- The `pipe.md` caps monthly amounts at $200 and requires both a known service and a
+  billing keyword before reporting anything — it errs toward missing a subscription
+  rather than inventing one.
+- Re-detections are suppressed via `./output/kordi-seen.json` so a billing page you
+  leave open doesn't get re-sent every hour.

@@ -1,29 +1,16 @@
-# dependencies
+# dependencies / build artifacts (local only)
 /node_modules
-
-# next.js
 /.next/
 /out/
-next-env.d.ts
-
-# production
 /build
 
-# misc
+# macOS
 .DS_Store
-*.pem
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
+# secrets / local env (KORDI_EMAIL lives here)
 .env
 .env*.local
+*.pem
 
-# typescript
-*.tsbuildinfo
-
-# pipe runtime state (local dedupe cache, written at runtime)
-/.kordi-state.json
+# pipe runtime output (local dedupe cache written at runtime)
+/output/
