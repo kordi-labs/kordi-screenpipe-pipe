@@ -112,10 +112,21 @@ renews"). When in doubt, skip it.
 `renewal`, `auto-renew`, `next billing`, `billed monthly`, `you've been charged`,
 `manage plan`, `manage subscription`, `payment method`, `per month`, `/mo`.
 
-**Extract the monthly amount.** Find dollar amounts (`$12.99`, `$ 9`, `USD 14.99`).
-Keep only plausible monthly figures (greater than 0 and **at most 200**). If several
-qualify, pick the **smallest** (the per-month figure, not an annual total). If you
-can't find a plausible amount, skip the candidate — amount is required.
+**Extract the monthly amount.** Find all dollar amounts in the text block (`$12.99`,
+`$ 9`, `USD 14.99`). For each, check the surrounding text (within ~40 characters) for
+a billing-period signal:
+
+- **Annual:** `/year`, `/yr`, `per year`, `annually`, `annual plan`, `billed annually`,
+  `yearly`
+- **Quarterly:** `/quarter`, `per quarter`, `quarterly`, `billed quarterly`,
+  `every 3 months`
+- **Monthly:** `/mo`, `/month`, `per month`, `monthly`, `billed monthly`
+
+Drop candidates outside their plausible raw range (> 0 and ≤ 2400 for annual, ≤ 600
+for quarterly, ≤ 200 for monthly or no signal). Then normalize each to a
+**monthly equivalent**: annual ÷ 12, quarterly ÷ 3, monthly as-is (round to 2 decimal
+places). If multiple candidates remain, pick the **smallest monthly equivalent**. If
+none survive, skip the candidate — amount is required.
 
 **Extract the billing day** (optional). If the text says e.g. "renews on the 12th" or
 shows an ISO date like `2026-06-12`, record the day-of-month (1–31). Omit if unclear.
