@@ -47,12 +47,12 @@ range from the context header:
 `subscription`, `receipt`, `renews`, `billed`, `payment method`
 
 ```bash
-curl -s "http://localhost:3030/search?q=subscription&content_type=vision&start_time=<START>&end_time=<END>&limit=50&min_length=8"
+curl -s "http://localhost:3030/search?q=subscription&content_type=ocr&start_time=<START>&end_time=<END>&limit=50&min_length=8"
 ```
 
 - Replace `<START>`/`<END>` with the ISO-8601 timestamps from the context header,
   and `q=` with each term in turn.
-- `content_type=vision` only — read screen text, **never** audio.
+- `content_type=ocr` only — read screen text, **never** audio.
 - Each result carries the visible `text`, the `app_name`, and a `timestamp`. Collect
   the text blocks across all five queries; de-duplicate identical blocks.
 
